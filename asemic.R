@@ -8,30 +8,114 @@ library(gganimate)
 library(ggplot2)
 
 # Setup ----
-set.seed(104) # make reproducible
+set.seed(106) # make reproducible
 
 # Parameters ----
-n_cpts <- 50 # number of control points
+n_cpts <- 6 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- rgb(248 / 255, 236 / 255, 194 / 255) "#F9F8EF" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
-canvas_height <- canvas_width * 297 / 210 # 297mm in pixels
+canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 75.590551181 * 0.9 # 20mm in pixels
 margin_right <- 75.590551181 * 0.9 # 20mm in pixels
 margin_top <- 75.590551181 * 0.9 # 20mm in pixels
 margin_bottom <- 75.590551181 * 0.9 # 20mm in pixels
-letter_height <- 22 # 5mm in pixels
-letter_width <- letter_height / 1.5
+letter_height <- 18 # 5mm in pixels
+letter_width <- letter_height
 letter_spacing <- 75.590551181 / 20 # 1mm in pixels
 line_spacing <- 37.795275591 / 10 # 2mm in pixels
 paragraph_indent <- 75.590551181 # 20mm in pixels
-p_space <- 0.15
+p_space <- 0
 p_newline <- 0.0075
 nrow_newline <- 4
-space_width <- letter_width * 0.45 # 5mm in pixels
+space_width <- letter_width * 0#0.45 # 5mm in pixels
 paragraph_spacing <- 1.5 * letter_height
+font_colour <- "#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+cursive <- FALSE
+corner_points <- FALSE
+steiner <- TRUE
+space_by_width <- TRUE
+
+# Pre-processing
+if(steiner) {
+  n_cpts <- 3 * n_letters
+  min_edges <- 3
+  max_edges <- 3
+  corner_points <- FALSE
+}
+
+# General functions ----
+# Function for computing equilateral point for ab (c is point of opposite side of equilateral point)
+compute_e <- function(a, b, c) { # a, b and c are vectors of length two (x and y components)
+  # Calculate the midpoint of ab
+  m <- (a + b) / 2
+  # Calculate the gradient of the line through m that is perpendicular to ab
+  grad_ab <- ifelse(a[1] == b[1], Inf, (b[2] - a[2]) / (b[1] - a[1])) # m = (y2 - y1) / (x2 - x1)
+  grad_em <- ifelse(grad_ab == 0, Inf, -1 / grad_ab) #m1m2 = -1 for perpendicular lines
+  # Calculate the intercept of the line through m that is perpendicular to ab
+  int_em <- ifelse(grad_em %in% c(-Inf, Inf), NA, m[2] - grad_em * m[1]) # y = mx + c --> c = y - mx
+  # calculate the distance from the midpoint of ab to the equilateral point
+  dist <- sqrt(3) / 2 * sqrt((b[1] - a[1])^2 + (b[2] - a[2])^2)
+  # calculate the co-ordinates of equilateral point 1
+  ex_1 <- m[1] + sqrt(dist^2 / (1 + grad_em^2)) # x = x1 +/- sqrt(d^2 / (1 + m^2))
+  ey_1 <- ifelse(is.na(int_em), m[2] + dist, grad_em * ex_1 + int_em)
+  # calculate the co-ordinates of equilateral point 2
+  ex_2 <- m[1] - sqrt(dist^2 / (1 + grad_em^2)) # x = x1 +/- sqrt(d^2 / (1 + m^2))
+  ey_2 <- ifelse(is.na(int_em), m[2] - dist, grad_em * ex_2 + int_em)
+  # calculate the distances from e1 and e2 to c
+  d_e1c <- sqrt((ex_1 - c[1])^2 + (ey_1 - c[2])^2)
+  d_e2c <- sqrt((ex_2 - c[1])^2 + (ey_2 - c[2])^2)
+  # e point is the one that is furthest from c
+  if (d_e1c >= d_e2c) {
+    e <- c(ex_1, ey_1)
+  } else {
+    e <- c(ex_2, ey_2)
+  }
+}
+
+# Function for calculating the intersection of two lines
+compute_intersect <- function(x1, y1, x2, y2, x3, y3, x4, y4) {
+  c(((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)),
+    ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)))
+}
+
+# Function for calculating the Euclidean distance between two points
+d <- function(x1, y1, x2, y2) {
+  sqrt((x2 - x1)^2 + (y2 - y1)^2)
+}
+
+# Function for creating Steiner tree on three points
+make_steiner3 <- function(a, b, c) {
+  ab <- sqrt((a[1] - b[1])^2 + (a[2] - b[2])^2)
+  ac <- sqrt((a[1] - c[1])^2 + (a[2] - c[2])^2)
+  bc <- sqrt((c[1] - b[1])^2 + (c[2] - b[2])^2)
+  angle_bac <- acos((ab^2 + ac^2 - bc^2) / (2 * ab * ac)) * 180 / pi
+  angle_abc <- acos((ab^2 + bc^2 - ac^2) / (2 * ab * bc)) * 180 / pi
+  angle_acb <- acos((ac^2 + bc^2 - ab^2) / (2 * ac * bc)) * 180 / pi
+  # find Steiner point
+  if(angle_bac >= 120) {
+    s <- a
+    valid <- 0
+  } else if (angle_abc >= 120) {
+    s <- b
+    valid <- 0
+  } else if (angle_acb >= 120) {
+    s <- c
+    valid <- 0
+  } else {
+    e1 <- compute_e(a, b, c)
+    e2 <- compute_e(c, a, b)
+    s <- compute_intersect(e1[1], e1[2], c[1], c[2], e2[1], e2[2], b[1], b[2])
+    valid <- 1
+  }
+  edges <- data.frame(x =    c(a[1], b[1], c[1]),
+                      y =    c(a[2], b[2], c[2]),
+                      xend = c(s[1], s[1], s[1]),
+                      yend = c(s[2], s[2], s[2]))
+  return(edges)
+}
 
 # Plotting theme
 theme_blankcanvas <- theme(
@@ -51,8 +135,13 @@ theme_blankcanvas <- theme(
 # Create alphabet ----
 
 # Create control points
-control_pts <- data.frame(x = c(0, 1, 1, 0, runif(n_cpts - 4)), y = c(0, 0, 1, 1, runif(n_cpts - 4))) %>%
-  mutate(x = x * letter_width, y = y * letter_height)
+if(corner_points) {
+  control_pts <- data.frame(x = c(0, 1, 1, 0, runif(n_cpts - 4)), y = c(0, 0, 1, 1, runif(n_cpts - 4))) %>%
+    mutate(x = x * letter_width, y = y * letter_height)
+} else {
+  control_pts <- data.frame(x = c(0, 1, runif(n_cpts - 2)), y = runif(n_cpts)) %>%
+    mutate(x = x * letter_width, y = y * letter_height)
+}
 
 # Calculate complete graph on control points
 complete_graph <- data.frame(x = numeric(0), y = numeric(0), xend = numeric(0), yend = numeric(0))
@@ -70,8 +159,16 @@ alphabet <- data.frame(letter_id = integer(0), x = numeric(0), y = numeric(0),
                        xend = numeric(0), yend = numeric(0))
 
 for(i in 1:n_letters) {
-  letter = sample_n(complete_graph, floor(runif(1, min_edges, max_edges + 1))) %>%
-    mutate(letter_id = i)
+  if(steiner) {
+    letter <- make_steiner3(c(control_pts$x[3 * (i - 1) + 1], control_pts$y[3 * (i - 1) + 1]),
+                            c(control_pts$x[3 * (i - 1) + 2], control_pts$y[3 * (i - 1) + 2]),
+                            c(control_pts$x[3 * (i - 1) + 3], control_pts$y[3 * (i - 1) + 3])) %>%
+      mutate(letter_id = i) %>%
+      select(letter_id, x, y, xend, yend)
+  } else {
+    letter <- sample_n(complete_graph, floor(runif(1, min_edges, max_edges + 1))) %>%
+      mutate(letter_id = i)
+  }
   alphabet <- alphabet %>%
     rbind(letter)
 }
@@ -80,21 +177,25 @@ for(i in 1:n_letters) {
 x_pos <- margin_left + paragraph_indent
 y_pos <- canvas_height - margin_top
 stop_writing <- FALSE
-text <- data.frame(x = numeric(0), y = numeric(0), xend = numeric(0), yend = numeric(0), letter_id = integer(0), frame_id = integer(0))
+text <- data.frame(x = numeric(0), y = numeric(0), xend = numeric(0), yend = numeric(0), letter_id = integer(0),
+                   paragraph_id = integer(0), frame_id = integer(0))
+points <- data.frame(x = numeric(0), y = numeric(0))
 last_space <- TRUE
 line_id <- 1
 frame_id <- 1
+paragraph_id <- 1
 
 while(stop_writing == FALSE) {
   # sample letter from alphabet
-  if(runif(1) <= p_space & last_space == FALSE) {
+  if(runif(1) < p_space & last_space == FALSE) {
     last_space <- TRUE
   } else {
     letter <- sample(1:n_letters, 1)
     # assign the letter its location on the canvas
     new_letter <- alphabet %>% filter(letter_id == letter) %>%
-      mutate(x = x + x_pos, y = y + y_pos, xend = xend + x_pos, yend = yend + y_pos, frame = floor(frame_id / 2))
+      mutate(x = x + x_pos, y = y + y_pos, xend = xend + x_pos, yend = yend + y_pos, paragraph_id = paragraph_id, frame = floor(frame_id / 2))
     text <- text %>% rbind(new_letter)
+    points <- points %>% rbind(control_pts %>% mutate(x = x + x_pos, y = y + y_pos))
     last_space <- FALSE
   }
   # update x_pos and y_pos
@@ -102,12 +203,16 @@ while(stop_writing == FALSE) {
     x_pos <- margin_left + paragraph_indent
     y_pos <- y_pos - paragraph_spacing - letter_height
     line_id <- 1
+    paragraph_id <- paragraph_id + 1
   } else if(x_pos + letter_spacing + letter_width > canvas_width - margin_right) { # go to next line
     x_pos <- margin_left
     y_pos <- y_pos - line_spacing - letter_height
     line_id <- line_id + 1
+    paragraph_id <- paragraph_id + 1
   } else {
-    x_pos <- x_pos + letter_spacing + letter_width + (space_width - letter_spacing) * (last_space == TRUE)
+    x_pos <- x_pos + letter_spacing + ifelse(space_by_width,
+                                             max(new_letter[, c("x", "xend")]) - min(new_letter[, c("x", "xend")]), letter_width) +
+      (space_width - letter_spacing) * (last_space == TRUE)
   }
   if(y_pos - line_spacing - letter_height < margin_bottom) {
     stop_writing <- TRUE
@@ -117,17 +222,27 @@ while(stop_writing == FALSE) {
 
 # Make plot ----
 p <- ggplot() +
-  #geom_segment(aes(x, y, xend = xend, yend = yend), alphabet) +
-  geom_segment(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.2) +
-  # geom_point(aes(x, y), control_pts) +
-  #coord_equal() +
   scale_x_continuous(limits = c(0, canvas_width), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, canvas_height), expand = c(0, 0)) +
-  #facet_wrap(~letter_id) +
   theme_blankcanvas
 
+if(cursive) {
+  p <- p +
+    geom_path(aes(x, y, group = paragraph_id, frame = frame, cumulative = TRUE), text, size = 0.5, colour = font_colour)
+} else {
+  p <- p +
+    geom_segment(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.35, colour = font_colour) +
+    geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
+    geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
+}
+p
+  #geom_segment(aes(x, y, xend = xend, yend = yend), alphabet) +
+  #
+  #coord_equal() +
+  #facet_wrap(~letter_id)
+
 # Save plot ----
-ggsave("asemic-2.png", p, width = 210, height = 297, units = "mm")
+ggsave("asemic-6.png", p, width = 210, height = 210, units = "mm")
 
 # Save gif ----
 # animation::ani.options(interval = 1/25)
