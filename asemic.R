@@ -9,38 +9,38 @@ library(ggplot2)
 library(tweenr)
 
 # Setup ----
-set.seed(109) # make reproducible
+set.seed(112) # make reproducible
 
 # Parameters ----
-n_cpts <- 25 # number of control points
+n_cpts <- 5 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "gray15" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 * 0.9 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
-margin_left <- 75.590551181 * 0 # 20mm in pixels
-margin_right <- 75.590551181 * 0 # 20mm in pixels
-margin_top <- 75.590551181 * 0 # 20mm in pixels
-margin_bottom <- 75.590551181 * 0 # 20mm in pixels
+margin_left <- 0 * 75.590551181 * 1 # 20mm in pixels
+margin_right <- 0 * 75.590551181 * 1 # 20mm in pixels
+margin_top <- 0 * 75.590551181 * 1 # 20mm in pixels
+margin_bottom <- 0 * 75.590551181 * 1 # 20mm in pixels
 letter_height <- 10 # 5mm in pixels
 letter_width <- letter_height * 1
-letter_spacing <- 75.590551181 / 20 # 1mm in pixels
-line_spacing <- 0 * 1 * 37.795275591 / 10 # 2mm in pixels
+letter_spacing <- letter_height / 2 # 1mm in pixels
+line_spacing <- 1 * 37.795275591 / 10 # 2mm in pixels
 paragraph_indent <- 0 * 75.590551181 # 20mm in pixels
-p_space <- 0.015
-p_newline <- 0.015
+p_space <- 0
+p_newline <- 0
 nrow_newline <- 100
 space_width <- letter_width * 0#0.45 # 5mm in pixels
-paragraph_spacing <- 1 * letter_height
-font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+paragraph_spacing <- 0 * letter_height
+font_colour <- "white" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
 space_by_width <- FALSE
 s <- 0.5
 ruled_lines <- FALSE
-highlight_text <- FALSE
+highlight_text <- TRUE
 
 # Pre-processing
 if(steiner) {
@@ -252,8 +252,8 @@ command_arrows <- rbind(command_arrows0, command_arrows1)
 
 temp <- text %>% group_by(frame) %>% summarise(maxx = max(x)) %>% mutate(size = runif(nrow(.)))
 text <- text %>% left_join(temp)
-text2 <- text %>% mutate(prop = runif(nrow(.)), x = x + prop * (canvas_width - maxx),
-                         xend = xend + prop * (canvas_width - maxx)) %>% select(-prop)
+text2 <- text %>% mutate(prop = runif(nrow(.)), x = x + prop * letter_width / 3,
+                         xend = xend + prop * letter_width / 3) %>% select(-prop)
 
 text <- text %>% mutate(frame2 = 1)
 text2 <- text2 %>% mutate(frame2 = 2)
@@ -262,7 +262,7 @@ df <- list(text, text2)
 
 tf <- tween_states(df, tweenlength = 1.5, statelength = 0,
                    ease = "linear",
-                   nframes = 100)
+                   nframes = 25)
 
 # Make plot ----
 p <- ggplot() +
@@ -282,7 +282,7 @@ if(cursive) {
   p <- p +
     #geom_tile(aes(x = x, y = y, width = width, height = height), text %>% mutate(width = letter_height / 10, height = width), fill = font_colour)
     geom_segment(aes(x = x, y = canvas_width - y, xend = xend, yend = canvas_width - yend, frame = frame2, cumulative = FALSE),
-                 tf, colour = font_colour, size = 0.3) +
+                 tf, colour = font_colour, size = 0.05) +
     scale_size_continuous(range = c(0.1, 0.4)) + theme(legend.position = "none")
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
@@ -304,12 +304,12 @@ if(highlight_text) {
 p <- p + coord_polar()
 
 # Save plot ----
-#ggsave("asemic-28.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-31.png", p, width = 210, height = 210, units = "mm")
 
 # Save gif ----
 # animation::ani.options(interval = 1/25)
 # gganimate(p, filename = "asemic.gif", title_frame = FALSE)
 
-animation::ani.options(interval = 1/25)
+#animation::ani.options(interval = 1/25)
 
-gganimate(p, "matrix-2.gif", title_frame = FALSE)
+#gganimate(p, "matrix-3.gif", title_frame = FALSE)
