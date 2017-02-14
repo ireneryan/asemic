@@ -20,13 +20,13 @@ n_letters <- 400 # number of letters in alphabet
 bg_col <- "transparent" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
-letter_height <- (canvas_width - margin_left - margin_right - 4 * letter_spacing) / 5 - 0.1 # 50 # 5mm in pixels
 margin_left <- 1 * 75.590551181 # 20mm in pixels
 margin_right <- 1 * 75.590551181 # 20mm in pixels
 margin_top <- 1 * 75.590551181 # 20mm in pixels
 margin_bottom <- 1 * 75.590551181 # 20mm in pixels
-letter_width <- letter_height / 1
+letter_width <- 65
 letter_spacing <- letter_width * 1 # 1mm in pixels
+letter_height <- (canvas_width - margin_left - margin_right - 4 * letter_spacing) / 5 - 0.1 # 50 # 5mm in pixels
 line_spacing <- letter_height * 1 # 2mm in pixels
 paragraph_indent <- 0 * margin_left # 20mm in pixels
 p_space <- 0.00 # probability of a space
@@ -358,7 +358,7 @@ if(highlight_text) {
 #p <- p + coord_polar()
 
 # Save plot ----
-ggsave("plots/sticks-05.png", p, width = 210, height = 210, units = "mm")
+ggsave("test.png", p, width = 210, height = 210, units = "mm")
 
 
 # Save gif ----
