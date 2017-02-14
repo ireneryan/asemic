@@ -17,7 +17,7 @@ n_cpts <- 7 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 400 # number of letters in alphabet
-bg_col <- "gray10" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "gray95" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 75.590551181 # 20mm in pixels
@@ -34,7 +34,7 @@ p_newline <- 0 # probability of a new line
 nrow_newline <- 0 # minimum number of rows before starting a new line
 space_width <- letter_width # 5mm in pixels
 paragraph_spacing <- letter_height
-font_colour <- "yellow" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
@@ -43,7 +43,7 @@ s <- 0.5
 ruled_lines <- FALSE
 highlight_text <- FALSE
 write_script <- TRUE
-script <- "grumpy wizards make toxic   brew for the  evil queen and jack"
+script <- "the five boxing wizards jump quickly"
 script_vector <- str_split(script, "", simplify = TRUE)[1, ]
 centre_vertically <- TRUE
 
@@ -296,8 +296,12 @@ command_arrows <- rbind(command_arrows0, command_arrows1)
 #                    nframes = 25)
 
 # Make plot ----
-nudge <- 50
-text2 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), x = x + delta) %>% select(-delta)
+nudge <- 250
+text2 <- text %>% mutate(delta1 = runif(nrow(.), -nudge, nudge), x = x + delta1,
+                         delta2 = runif(nrow(.), -nudge, nudge), y = y + delta2,
+                         delta3 = runif(nrow(.), -nudge, nudge), xend = xend + delta3,
+                         delta4 = runif(nrow(.), -nudge, nudge), yend = yend + delta4) %>%
+  select(-delta1, -delta2, -delta3, -delta4)
 #text3 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), xend = xend + delta) %>% select(-delta)
 #text4 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), y = y + delta) %>% select(-delta)
 #text5 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), yend = yend + delta) %>% select(-delta)
@@ -356,7 +360,7 @@ if(highlight_text) {
 # p <- p + coord_polar()
 
 # Save plot ----
-ggsave("asemic-38.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-40.png", p, width = 210, height = 210, units = "mm")
 # ggsave("alphabet-01.png", p2, width = 210, height = 297, units = "mm")
 
 # Save gif ----
