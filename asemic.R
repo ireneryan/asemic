@@ -6,33 +6,34 @@ library(cowplot)
 library(dplyr)
 library(gganimate)
 library(ggplot2)
+library(stringr)
 library(tweenr)
 
 # Setup ----
-set.seed(112) # make reproducible
+set.seed(101) # make reproducible
 
 # Parameters ----
-n_cpts <- 5 # number of control points
+n_cpts <- 7 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
-n_letters <- 26 # number of letters in alphabet
-bg_col <- "gray15" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
-canvas_width <- 793.700787402 * 0.9 # 210mm in pixels
+n_letters <- 400 # number of letters in alphabet
+bg_col <- "black" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
-margin_left <- 0 * 75.590551181 * 1 # 20mm in pixels
-margin_right <- 0 * 75.590551181 * 1 # 20mm in pixels
-margin_top <- 0 * 75.590551181 * 1 # 20mm in pixels
-margin_bottom <- 0 * 75.590551181 * 1 # 20mm in pixels
-letter_height <- 10 # 5mm in pixels
-letter_width <- letter_height * 1
-letter_spacing <- letter_height / 2 # 1mm in pixels
-line_spacing <- 1 * 37.795275591 / 10 # 2mm in pixels
-paragraph_indent <- 0 * 75.590551181 # 20mm in pixels
-p_space <- 0
-p_newline <- 0
-nrow_newline <- 100
-space_width <- letter_width * 0#0.45 # 5mm in pixels
-paragraph_spacing <- 0 * letter_height
+margin_left <- 75.590551181 # 20mm in pixels
+margin_right <- 75.590551181 # 20mm in pixels
+margin_top <- 75.590551181 # 20mm in pixels
+margin_bottom <- 0 * 75.590551181 # 20mm in pixels
+letter_height <- 70 # 5mm in pixels
+letter_width <- letter_height / 1.2
+letter_spacing <- letter_width / 10 # 1mm in pixels
+line_spacing <- letter_height / 2 # 2mm in pixels
+paragraph_indent <- 0 * margin_left # 20mm in pixels
+p_space <- 0 # probability of a space
+p_newline <- 0 # probability of a new line
+nrow_newline <- 0 # minimum number of rows before starting a new line
+space_width <- letter_width # 5mm in pixels
+paragraph_spacing <- letter_height
 font_colour <- "white" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
@@ -40,7 +41,12 @@ steiner <- FALSE
 space_by_width <- FALSE
 s <- 0.5
 ruled_lines <- FALSE
-highlight_text <- TRUE
+highlight_text <- FALSE
+write_script <- TRUE
+script <- "the quick brown fox jumps over the lazy dog"
+#script <- "hi my where are the kids
+script_vector <- str_split(script, "", simplify = TRUE)[1, ]
+centre_vertically <- TRUE
 
 # Pre-processing
 if(steiner) {
@@ -132,7 +138,7 @@ theme_blankcanvas <- theme(
   panel.border = element_blank(),
   panel.grid = element_blank(),
   plot.background = element_rect(fill = bg_col, colour = bg_col),
-  plot.margin = unit(c(0, 0, -1, -1), "mm"), # top, right, bottom, left
+  plot.margin = unit(c(0, 0, -2, -1), "mm"), # top, right, bottom, left
   strip.background = element_blank(),
   strip.text = element_blank()
 )
@@ -186,6 +192,13 @@ for(i in 1:n_letters) {
     rbind(letter)
 }
 
+# Manual lookup
+alphabet <- alphabet %>%
+  rbind(data.frame(x = 0, y = 0, xend = 0.001, yend = 0.001, letter_id = nrow(.) + 1))
+alphabet_lookup <- data.frame(letter = c(letters, " "),
+                              index = c(346, 146, 29, 35, 186, 154, 203, 220, 330, 38, 24, 123,
+                                        174, 100, 328, 384, 282, 258, 91, 120, 157, 19, 319, 41, 1, 162, nrow(alphabet)))
+
 # Write text ----
 lines <- data.frame(x = numeric(0), y = numeric(0), xend = numeric(0), yend = numeric(0))
 x_pos <- margin_left + paragraph_indent
@@ -199,13 +212,22 @@ last_space <- TRUE
 line_id <- 1
 frame_id <- 1
 paragraph_id <- 1
+script_index <- 1
 
 while(stop_writing == FALSE) {
   # sample letter from alphabet
-  if(runif(1) < p_space & last_space == FALSE) {
+  if(runif(1) < p_space & last_space == FALSE & write_script == FALSE) {
     last_space <- TRUE
   } else {
-    letter <- sample(1:n_letters, 1)
+    if(write_script == TRUE) {
+      letter <- alphabet_lookup$index[alphabet_lookup$letter == script_vector[script_index]]
+      # if(letter == " ") {
+      #   last_space <- TRUE
+      # }
+      script_index <- script_index + 1
+    } else {
+      letter <- sample(1:n_letters, 1)
+    }
     # assign the letter its location on the canvas
     new_letter <- alphabet %>% filter(letter_id == letter) %>%
       mutate(x = x + x_pos, y = y + y_pos, xend = xend + x_pos, yend = yend + y_pos, paragraph_id = paragraph_id, frame = floor(frame_id / 2))
@@ -213,14 +235,17 @@ while(stop_writing == FALSE) {
     points <- points %>% rbind(control_pts %>% mutate(x = x + x_pos, y = y + y_pos))
     last_space <- FALSE
   }
+  if(script_index > length(script)) {
+    stop_writing == TRUE
+  }
   # update x_pos and y_pos
-  if(runif(1) < p_newline & line_id >= nrow_newline) {
+  if((runif(1) < p_newline & line_id >= nrow_newline)) {
     x_pos <- margin_left + paragraph_indent
     y_pos <- y_pos - paragraph_spacing - letter_height
     lines <- lines %>% rbind(data.frame(x = margin_left, y = y_pos, xend = canvas_width - margin_right, yend = y_pos))
     line_id <- 1
     paragraph_id <- paragraph_id + 1
-  } else if(x_pos + letter_spacing + letter_width > canvas_width - margin_right) { # go to next line
+  } else if(x_pos + letter_spacing + 2 * letter_width > canvas_width - margin_right) { # go to next line
     x_pos <- margin_left
     y_pos <- y_pos - line_spacing - letter_height
     lines <- lines %>% rbind(data.frame(x = margin_left, y = y_pos, xend = canvas_width - margin_right, yend = y_pos))
@@ -237,6 +262,13 @@ while(stop_writing == FALSE) {
   frame_id <- frame_id + 1
 }
 
+# Centre vertically
+if(centre_vertically == TRUE) {
+  offset = (max(text$y) - min(text$y)) / 2 - canvas_height / 2
+  text <- text %>%
+    mutate(y = y + offset, yend = yend + offset)
+}
+
 # Create highlights ----
 highlights <- lines %>%
   mutate(xmin = runif(nrow(.), margin_left, canvas_width - margin_right),
@@ -250,21 +282,30 @@ command_arrows0 <- data.frame(y = lines$y + 0.25 * letter_height,
 command_arrows1 <- data.frame(y = lines$y + 0.75 * letter_height, yend = lines$yend + letter_height / 2, x = paragraph_indent / 2 - 0.5 * letter_height) %>% mutate(xend = x + 0.5 * letter_height)
 command_arrows <- rbind(command_arrows0, command_arrows1)
 
-temp <- text %>% group_by(frame) %>% summarise(maxx = max(x)) %>% mutate(size = runif(nrow(.)))
-text <- text %>% left_join(temp)
-text2 <- text %>% mutate(prop = runif(nrow(.)), x = x + prop * letter_width / 3,
-                         xend = xend + prop * letter_width / 3) %>% select(-prop)
-
-text <- text %>% mutate(frame2 = 1)
-text2 <- text2 %>% mutate(frame2 = 2)
-
-df <- list(text, text2)
-
-tf <- tween_states(df, tweenlength = 1.5, statelength = 0,
-                   ease = "linear",
-                   nframes = 25)
+# temp <- text %>% group_by(frame) %>% summarise(maxx = max(x)) %>% mutate(size = runif(nrow(.)))
+# text <- text %>% left_join(temp)
+# text2 <- text %>% mutate(prop = runif(nrow(.)), x = x + prop * letter_width / 3,
+#                          xend = xend + prop * letter_width / 3) %>% select(-prop)
+# 
+# text <- text %>% mutate(frame2 = 1)
+# text2 <- text2 %>% mutate(frame2 = 2)
+# 
+# df <- list(text, text2)
+# 
+# tf <- tween_states(df, tweenlength = 1.5, statelength = 0,
+#                    ease = "linear",
+#                    nframes = 25)
 
 # Make plot ----
+
+# Plot alphabet
+p2 <- ggplot(alphabet) +
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend), alphabet) +
+  coord_equal() +
+  facet_wrap(~letter_id) +
+  theme_blankcanvas +
+  theme(strip.text = element_text(size = 6))
+
 p <- ggplot() +
   scale_x_continuous(limits = c(0, canvas_width), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, canvas_height), expand = c(0, 0)) +
@@ -281,9 +322,10 @@ if(cursive) {
 } else {
   p <- p +
     #geom_tile(aes(x = x, y = y, width = width, height = height), text %>% mutate(width = letter_height / 10, height = width), fill = font_colour)
-    geom_segment(aes(x = x, y = canvas_width - y, xend = xend, yend = canvas_width - yend, frame = frame2, cumulative = FALSE),
-                 tf, colour = font_colour, size = 0.05) +
-    scale_size_continuous(range = c(0.1, 0.4)) + theme(legend.position = "none")
+    geom_segment(aes(x = x, y = y, xend = xend, yend = yend, frame = frame, cumulative = FALSE),
+                 text %>% filter(letter_id != nrow(alphabet)),
+                 colour = font_colour, size = 1.25, lineend = "round") #+
+    #scale_size_continuous(range = c(0.1, 0.4)) + theme(legend.position = "none")
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
     #geom_segment(aes(x, y, xend = xend, yend = yend), command_arrows, size = 0.35, colour = font_colour)
@@ -301,15 +343,15 @@ if(highlight_text) {
               fill = "yellow" , alpha = 0.5)
 }
 
-p <- p + coord_polar()
+# p <- p + coord_polar()
 
 # Save plot ----
-ggsave("asemic-31.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-35.png", p, width = 210, height = 210, units = "mm")
+# ggsave("alphabet-01.png", p2, width = 210, height = 297, units = "mm")
 
 # Save gif ----
-# animation::ani.options(interval = 1/25)
-# gganimate(p, filename = "asemic.gif", title_frame = FALSE)
-
 #animation::ani.options(interval = 1/25)
-
 #gganimate(p, "matrix-3.gif", title_frame = FALSE)
+
+#save(alphabet, file = "alphabet.Rda")
+#load("alphabet.Rda")
