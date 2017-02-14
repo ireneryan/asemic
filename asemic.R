@@ -15,7 +15,7 @@ n_cpts <- 6 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- "#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "black" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 75.590551181 * 0.9 # 20mm in pixels
@@ -23,20 +23,21 @@ margin_right <- 75.590551181 * 0.9 # 20mm in pixels
 margin_top <- 75.590551181 * 0.9 # 20mm in pixels
 margin_bottom <- 75.590551181 * 0.9 # 20mm in pixels
 letter_height <- 18 # 5mm in pixels
-letter_width <- letter_height
+letter_width <- letter_height / 1.6
 letter_spacing <- 75.590551181 / 20 # 1mm in pixels
 line_spacing <- 37.795275591 / 10 # 2mm in pixels
 paragraph_indent <- 75.590551181 # 20mm in pixels
-p_space <- 0
+p_space <- 0.05
 p_newline <- 0.0075
 nrow_newline <- 4
 space_width <- letter_width * 0#0.45 # 5mm in pixels
 paragraph_spacing <- 1.5 * letter_height
-font_colour <- "#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+font_colour <- "white"  #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
-corner_points <- FALSE
-steiner <- TRUE
-space_by_width <- TRUE
+corner_points <- TRUE
+steiner <- FALSE
+space_by_width <- FALSE
+s <- 0.5
 
 # Pre-processing
 if(steiner) {
@@ -138,6 +139,12 @@ theme_blankcanvas <- theme(
 if(corner_points) {
   control_pts <- data.frame(x = c(0, 1, 1, 0, runif(n_cpts - 4)), y = c(0, 0, 1, 1, runif(n_cpts - 4))) %>%
     mutate(x = x * letter_width, y = y * letter_height)
+  
+  control_pts <- data.frame(x = rep(seq(0, 1, s), times = 1/s+1),
+                   y = rep(seq(0, 1, s), each = 1/s+1)) %>%
+    mutate(x = x * letter_width, y = y * letter_height)
+  
+  
 } else {
   control_pts <- data.frame(x = c(0, 1, runif(n_cpts - 2)), y = runif(n_cpts)) %>%
     mutate(x = x * letter_width, y = y * letter_height)
@@ -231,9 +238,9 @@ if(cursive) {
     geom_path(aes(x, y, group = paragraph_id, frame = frame, cumulative = TRUE), text, size = 0.5, colour = font_colour)
 } else {
   p <- p +
-    geom_segment(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.35, colour = font_colour) +
-    geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
-    geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
+    geom_curve(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.35, colour = font_colour, angle = 0) #+
+    #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
+    #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
 }
 p
   #geom_segment(aes(x, y, xend = xend, yend = yend), alphabet) +
@@ -242,7 +249,7 @@ p
   #facet_wrap(~letter_id)
 
 # Save plot ----
-ggsave("asemic-6.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-10.png", p, width = 210, height = 210, units = "mm")
 
 # Save gif ----
 # animation::ani.options(interval = 1/25)
