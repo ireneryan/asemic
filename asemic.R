@@ -11,35 +11,35 @@ library(ggplot2)
 set.seed(106) # make reproducible
 
 # Parameters ----
-n_cpts <- 6 # number of control points
+n_cpts <- 5 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- "white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
-margin_left <- 75.590551181 * 0.9 # 20mm in pixels
-margin_right <- 75.590551181 * 0.9 # 20mm in pixels
-margin_top <- 75.590551181 * 0.9 # 20mm in pixels
-margin_bottom <- 75.590551181 * 0.9 # 20mm in pixels
-letter_height <- 18 # 5mm in pixels
-letter_width <- letter_height / 1
+margin_left <- 75.590551181 * 0 # 20mm in pixels
+margin_right <- 75.590551181 * 0 # 20mm in pixels
+margin_top <- 75.590551181 * 0 # 20mm in pixels
+margin_bottom <- 75.590551181 * 0 # 20mm in pixels
+letter_height <- 12 # 5mm in pixels
+letter_width <- letter_height / 2
 letter_spacing <- 75.590551181 / 20 # 1mm in pixels
-line_spacing <- 3 * 37.795275591 / 10 # 2mm in pixels
+line_spacing <- 1 * 37.795275591 / 10 # 2mm in pixels
 paragraph_indent <- 75.590551181 # 20mm in pixels
 p_space <- 0.05
 p_newline <- 0.0075
 nrow_newline <- 4
 space_width <- letter_width * 0#0.45 # 5mm in pixels
 paragraph_spacing <- 1.5 * letter_height
-font_colour <- "#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
 space_by_width <- FALSE
 s <- 0.5
-ruled_lines <- TRUE
-highlight_text <- TRUE
+ruled_lines <- FALSE
+highlight_text <- FALSE
 
 # Pre-processing
 if(steiner) {
@@ -142,10 +142,10 @@ if(corner_points) {
   control_pts <- data.frame(x = c(0, 1, 1, 0, runif(n_cpts - 4)), y = c(0, 0, 1, 1, runif(n_cpts - 4))) %>%
     mutate(x = x * letter_width, y = y * letter_height)
   
-  control_pts <- data.frame(x = rep(seq(0, 1, s), times = 1/s+1),
-                   y = rep(seq(0, 1, s), each = 1/s+1)) %>%
-    mutate(x = x * letter_width, y = y * letter_height)
-  n_cpts <- nrow(control_pts)
+  # control_pts <- data.frame(x = rep(seq(0, 1, s), times = 1/s+1),
+  #                  y = rep(seq(0, 1, s), each = 1/s+1)) %>%
+  #   mutate(x = x * letter_width, y = y * letter_height)
+  # n_cpts <- nrow(control_pts)
   
   
 } else {
@@ -273,8 +273,10 @@ if(highlight_text) {
               fill = "yellow" , alpha = 0.5)
 }
 
+p <- p + coord_polar()
+
 # Save plot ----
-ggsave("asemic-16.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-21.png", p, width = 210, height = 210, units = "mm")
 
 # Save gif ----
 # animation::ani.options(interval = 1/25)
