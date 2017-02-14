@@ -17,15 +17,15 @@ n_cpts <- 7 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 400 # number of letters in alphabet
-bg_col <- "black" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "gray10" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 75.590551181 # 20mm in pixels
 margin_right <- 75.590551181 # 20mm in pixels
-margin_top <- 75.590551181 # 20mm in pixels
+margin_top <- 0 * 75.590551181 # 20mm in pixels
 margin_bottom <- 0 * 75.590551181 # 20mm in pixels
-letter_height <- 70 # 5mm in pixels
-letter_width <- letter_height / 1.2
+letter_height <- 65 # 5mm in pixels
+letter_width <- letter_height / 1.6
 letter_spacing <- letter_width / 10 # 1mm in pixels
 line_spacing <- letter_height / 2 # 2mm in pixels
 paragraph_indent <- 0 * margin_left # 20mm in pixels
@@ -34,7 +34,7 @@ p_newline <- 0 # probability of a new line
 nrow_newline <- 0 # minimum number of rows before starting a new line
 space_width <- letter_width # 5mm in pixels
 paragraph_spacing <- letter_height
-font_colour <- "white" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+font_colour <- "yellow" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
@@ -43,8 +43,7 @@ s <- 0.5
 ruled_lines <- FALSE
 highlight_text <- FALSE
 write_script <- TRUE
-script <- "the quick brown fox jumps over the lazy dog"
-#script <- "hi my where are the kids
+script <- "grumpy wizards make toxic   brew for the  evil queen and jack"
 script_vector <- str_split(script, "", simplify = TRUE)[1, ]
 centre_vertically <- TRUE
 
@@ -297,6 +296,17 @@ command_arrows <- rbind(command_arrows0, command_arrows1)
 #                    nframes = 25)
 
 # Make plot ----
+nudge <- 50
+text2 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), x = x + delta) %>% select(-delta)
+#text3 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), xend = xend + delta) %>% select(-delta)
+#text4 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), y = y + delta) %>% select(-delta)
+#text5 <- text %>% mutate(delta = runif(nrow(.), -nudge, nudge), yend = yend + delta) %>% select(-delta)
+
+df <- list(text, text2)
+
+tf <- tween_states(df, tweenlength = 1.5, statelength = 0,
+                   ease = "exponential-in",
+                   nframes = 1000)
 
 # Plot alphabet
 p2 <- ggplot(alphabet) +
@@ -323,8 +333,8 @@ if(cursive) {
   p <- p +
     #geom_tile(aes(x = x, y = y, width = width, height = height), text %>% mutate(width = letter_height / 10, height = width), fill = font_colour)
     geom_segment(aes(x = x, y = y, xend = xend, yend = yend, frame = frame, cumulative = FALSE),
-                 text %>% filter(letter_id != nrow(alphabet)),
-                 colour = font_colour, size = 1.25, lineend = "round") #+
+                 tf %>% filter(letter_id != nrow(alphabet)),
+                 colour = font_colour, lineend = "round", size = 0.2, alpha = 0.03) #+
     #scale_size_continuous(range = c(0.1, 0.4)) + theme(legend.position = "none")
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
@@ -346,7 +356,7 @@ if(highlight_text) {
 # p <- p + coord_polar()
 
 # Save plot ----
-ggsave("asemic-35.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-38.png", p, width = 210, height = 210, units = "mm")
 # ggsave("alphabet-01.png", p2, width = 210, height = 297, units = "mm")
 
 # Save gif ----
