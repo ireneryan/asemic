@@ -15,7 +15,7 @@ n_cpts <- 6 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- "black" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 75.590551181 * 0.9 # 20mm in pixels
@@ -23,21 +23,23 @@ margin_right <- 75.590551181 * 0.9 # 20mm in pixels
 margin_top <- 75.590551181 * 0.9 # 20mm in pixels
 margin_bottom <- 75.590551181 * 0.9 # 20mm in pixels
 letter_height <- 18 # 5mm in pixels
-letter_width <- letter_height / 1.6
+letter_width <- letter_height / 1
 letter_spacing <- 75.590551181 / 20 # 1mm in pixels
-line_spacing <- 37.795275591 / 10 # 2mm in pixels
+line_spacing <- 3 * 37.795275591 / 10 # 2mm in pixels
 paragraph_indent <- 75.590551181 # 20mm in pixels
 p_space <- 0.05
 p_newline <- 0.0075
 nrow_newline <- 4
 space_width <- letter_width * 0#0.45 # 5mm in pixels
 paragraph_spacing <- 1.5 * letter_height
-font_colour <- "white"  #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+font_colour <- "#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
 space_by_width <- FALSE
 s <- 0.5
+ruled_lines <- TRUE
+highlight_text <- TRUE
 
 # Pre-processing
 if(steiner) {
@@ -143,6 +145,7 @@ if(corner_points) {
   control_pts <- data.frame(x = rep(seq(0, 1, s), times = 1/s+1),
                    y = rep(seq(0, 1, s), each = 1/s+1)) %>%
     mutate(x = x * letter_width, y = y * letter_height)
+  n_cpts <- nrow(control_pts)
   
   
 } else {
@@ -181,8 +184,10 @@ for(i in 1:n_letters) {
 }
 
 # Write text ----
+lines <- data.frame(x = numeric(0), y = numeric(0), xend = numeric(0), yend = numeric(0))
 x_pos <- margin_left + paragraph_indent
 y_pos <- canvas_height - margin_top
+lines <- lines %>% rbind(data.frame(x = margin_left, y = y_pos, xend = canvas_width - margin_right, yend = y_pos))
 stop_writing <- FALSE
 text <- data.frame(x = numeric(0), y = numeric(0), xend = numeric(0), yend = numeric(0), letter_id = integer(0),
                    paragraph_id = integer(0), frame_id = integer(0))
@@ -209,11 +214,13 @@ while(stop_writing == FALSE) {
   if(runif(1) < p_newline & line_id >= nrow_newline) {
     x_pos <- margin_left + paragraph_indent
     y_pos <- y_pos - paragraph_spacing - letter_height
+    lines <- lines %>% rbind(data.frame(x = margin_left, y = y_pos, xend = canvas_width - margin_right, yend = y_pos))
     line_id <- 1
     paragraph_id <- paragraph_id + 1
   } else if(x_pos + letter_spacing + letter_width > canvas_width - margin_right) { # go to next line
     x_pos <- margin_left
     y_pos <- y_pos - line_spacing - letter_height
+    lines <- lines %>% rbind(data.frame(x = margin_left, y = y_pos, xend = canvas_width - margin_right, yend = y_pos))
     line_id <- line_id + 1
     paragraph_id <- paragraph_id + 1
   } else {
@@ -227,29 +234,47 @@ while(stop_writing == FALSE) {
   frame_id <- frame_id + 1
 }
 
+# Create highlights ----
+highlights <- lines %>%
+  mutate(xmin = runif(nrow(.), margin_left, canvas_width - margin_right),
+         xmax = runif(nrow(.), margin_left, canvas_width - margin_right),
+         ymin = y, ymax = y + letter_height)
+
 # Make plot ----
 p <- ggplot() +
   scale_x_continuous(limits = c(0, canvas_width), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, canvas_height), expand = c(0, 0)) +
   theme_blankcanvas
 
+if(ruled_lines) {
+  p <- p + geom_segment(aes(x, y, xend = xend, yend = yend), lines, colour = "black", alpha = 1,
+                        size = 0.1)
+}
+
 if(cursive) {
   p <- p +
     geom_path(aes(x, y, group = paragraph_id, frame = frame, cumulative = TRUE), text, size = 0.5, colour = font_colour)
 } else {
   p <- p +
-    geom_curve(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.35, colour = font_colour, angle = 0) #+
+    geom_segment(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.35, colour = font_colour, angle = 0) #+
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
 }
-p
+
+#p <- p + coord_polar()
   #geom_segment(aes(x, y, xend = xend, yend = yend), alphabet) +
   #
   #coord_equal() +
   #facet_wrap(~letter_id)
 
+if(highlight_text) {
+  p <- p +
+    geom_rect(aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax), highlights,
+              fill = "yellow" , alpha = 0.5)
+}
+
 # Save plot ----
-ggsave("asemic-10.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-16.png", p, width = 210, height = 210, units = "mm")
 
 # Save gif ----
 # animation::ani.options(interval = 1/25)
