@@ -6,32 +6,33 @@ library(cowplot)
 library(dplyr)
 library(gganimate)
 library(ggplot2)
+library(tweenr)
 
 # Setup ----
-set.seed(107) # make reproducible
+set.seed(108) # make reproducible
 
 # Parameters ----
-n_cpts <- 25 # number of control points
+n_cpts <- 10 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
 bg_col <- "black" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
-canvas_width <- 793.700787402 # 210mm in pixels
+canvas_width <- 793.700787402 * 0.9 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 75.590551181 * 0 # 20mm in pixels
 margin_right <- 75.590551181 * 0 # 20mm in pixels
 margin_top <- 75.590551181 * 0 # 20mm in pixels
 margin_bottom <- 75.590551181 * 0 # 20mm in pixels
-letter_height <- 24 # 5mm in pixels
-letter_width <- letter_height / 1.5
+letter_height <- 12 # 5mm in pixels
+letter_width <- letter_height * 1
 letter_spacing <- 75.590551181 / 20 # 1mm in pixels
 line_spacing <- 0 * 1 * 37.795275591 / 10 # 2mm in pixels
-paragraph_indent <- 75.590551181 # 20mm in pixels
+paragraph_indent <- 0 * 75.590551181 # 20mm in pixels
 p_space <- 0.015
-p_newline <- 0.075
+p_newline <- 0.015
 nrow_newline <- 1
 space_width <- letter_width * 0#0.45 # 5mm in pixels
-paragraph_spacing <- 1.5 * letter_height
+paragraph_spacing <- 1 * letter_height
 font_colour <- "lightGreen" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
@@ -249,6 +250,20 @@ command_arrows0 <- data.frame(y = lines$y + 0.25 * letter_height,
 command_arrows1 <- data.frame(y = lines$y + 0.75 * letter_height, yend = lines$yend + letter_height / 2, x = paragraph_indent / 2 - 0.5 * letter_height) %>% mutate(xend = x + 0.5 * letter_height)
 command_arrows <- rbind(command_arrows0, command_arrows1)
 
+temp <- text %>% group_by(frame) %>% summarise(maxx = max(x)) %>% mutate(size = runif(nrow(.)))
+text <- text %>% left_join(temp)
+text2 <- text %>% mutate(prop = runif(nrow(.)), x = x + prop * (canvas_width - maxx),
+                         xend = xend + prop * (canvas_width - maxx)) %>% select(-prop)
+
+text <- text %>% mutate(frame2 = 1)
+text2 <- text2 %>% mutate(frame2 = 2)
+
+df <- list(text, text2)
+
+tf <- tween_states(df, tweenlength = 1.5, statelength = 0,
+                   ease = "linear",
+                   nframes = 100)
+
 # Make plot ----
 p <- ggplot() +
   scale_x_continuous(limits = c(0, canvas_width), expand = c(0, 0)) +
@@ -266,10 +281,12 @@ if(cursive) {
 } else {
   p <- p +
     #geom_tile(aes(x = x, y = y, width = width, height = height), text %>% mutate(width = letter_height / 10, height = width), fill = font_colour)
-    geom_segment(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.35, colour = font_colour, angle = 0) +
+    geom_segment(aes(x = y, y = canvas_height - x, xend = yend, yend = canvas_height - xend, frame = frame2, cumulative = FALSE, size = size),
+                 tf, colour = font_colour) +
+    scale_size_continuous(range = c(0.1, 0.4))
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
-    geom_segment(aes(x, y, xend = xend, yend = yend), command_arrows, size = 0.35, colour = font_colour)
+    #geom_segment(aes(x, y, xend = xend, yend = yend), command_arrows, size = 0.35, colour = font_colour)
 }
 
 #p <- p + coord_polar()
@@ -287,8 +304,12 @@ if(highlight_text) {
 #p <- p + coord_polar()
 
 # Save plot ----
-ggsave("asemic-22.png", p, width = 210, height = 210, units = "mm")
+#ggsave("asemic-28.png", p, width = 210, height = 210, units = "mm")
 
 # Save gif ----
 # animation::ani.options(interval = 1/25)
 # gganimate(p, filename = "asemic.gif", title_frame = FALSE)
+
+animation::ani.options(interval = 1/25)
+
+gganimate(p, "matrix.gif")
