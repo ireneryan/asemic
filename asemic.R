@@ -9,31 +9,31 @@ library(ggplot2)
 library(tweenr)
 
 # Setup ----
-set.seed(108) # make reproducible
+set.seed(109) # make reproducible
 
 # Parameters ----
-n_cpts <- 10 # number of control points
+n_cpts <- 25 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- "black" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 * 0.9 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 75.590551181 * 0 # 20mm in pixels
 margin_right <- 75.590551181 * 0 # 20mm in pixels
 margin_top <- 75.590551181 * 0 # 20mm in pixels
 margin_bottom <- 75.590551181 * 0 # 20mm in pixels
-letter_height <- 12 # 5mm in pixels
+letter_height <- 10 # 5mm in pixels
 letter_width <- letter_height * 1
 letter_spacing <- 75.590551181 / 20 # 1mm in pixels
 line_spacing <- 0 * 1 * 37.795275591 / 10 # 2mm in pixels
 paragraph_indent <- 0 * 75.590551181 # 20mm in pixels
 p_space <- 0.015
 p_newline <- 0.015
-nrow_newline <- 1
+nrow_newline <- 100
 space_width <- letter_width * 0#0.45 # 5mm in pixels
 paragraph_spacing <- 1 * letter_height
-font_colour <- "lightGreen" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
@@ -128,10 +128,10 @@ theme_blankcanvas <- theme(
   axis.ticks = element_blank(),
   axis.line = element_blank(),
   legend.position = "none",
-  panel.background = element_rect(fill = "transparent", colour = "transparent"),
+  panel.background = element_rect(fill = bg_col, colour = bg_col),
   panel.border = element_blank(),
   panel.grid = element_blank(),
-  plot.background = element_rect(fill = "black", colour = "transparent"),
+  plot.background = element_rect(fill = bg_col, colour = bg_col),
   plot.margin = unit(c(0, 0, -1, -1), "mm"), # top, right, bottom, left
   strip.background = element_blank(),
   strip.text = element_blank()
@@ -281,9 +281,9 @@ if(cursive) {
 } else {
   p <- p +
     #geom_tile(aes(x = x, y = y, width = width, height = height), text %>% mutate(width = letter_height / 10, height = width), fill = font_colour)
-    geom_segment(aes(x = y, y = canvas_height - x, xend = yend, yend = canvas_height - xend, frame = frame2, cumulative = FALSE, size = size),
-                 tf, colour = font_colour) +
-    scale_size_continuous(range = c(0.1, 0.4))
+    geom_segment(aes(x = x, y = canvas_width - y, xend = xend, yend = canvas_width - yend, frame = frame2, cumulative = FALSE),
+                 tf, colour = font_colour, size = 0.3) +
+    scale_size_continuous(range = c(0.1, 0.4)) + theme(legend.position = "none")
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
     #geom_segment(aes(x, y, xend = xend, yend = yend), command_arrows, size = 0.35, colour = font_colour)
@@ -301,7 +301,7 @@ if(highlight_text) {
               fill = "yellow" , alpha = 0.5)
 }
 
-#p <- p + coord_polar()
+p <- p + coord_polar()
 
 # Save plot ----
 #ggsave("asemic-28.png", p, width = 210, height = 210, units = "mm")
@@ -312,4 +312,4 @@ if(highlight_text) {
 
 animation::ani.options(interval = 1/25)
 
-gganimate(p, "matrix.gif")
+gganimate(p, "matrix-2.gif", title_frame = FALSE)
