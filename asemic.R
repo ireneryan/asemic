@@ -8,26 +8,26 @@ library(gganimate)
 library(ggplot2)
 
 # Setup ----
-set.seed(101) # make reproducible
+set.seed(104) # make reproducible
 
 # Parameters ----
-n_cpts <- 5 # number of control points
+n_cpts <- 50 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- "#F9F8EF" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- rgb(248 / 255, 236 / 255, 194 / 255) "#F9F8EF" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
-canvas_height <- canvas_width # 297mm in pixels
-margin_left <- 75.590551181 # 20mm in pixels
-margin_right <- 75.590551181 # 20mm in pixels
-margin_top <- 75.590551181 # 20mm in pixels
-margin_bottom <- 75.590551181 # 20mm in pixels
+canvas_height <- canvas_width * 297 / 210 # 297mm in pixels
+margin_left <- 75.590551181 * 0.9 # 20mm in pixels
+margin_right <- 75.590551181 * 0.9 # 20mm in pixels
+margin_top <- 75.590551181 * 0.9 # 20mm in pixels
+margin_bottom <- 75.590551181 * 0.9 # 20mm in pixels
 letter_height <- 22 # 5mm in pixels
 letter_width <- letter_height / 1.5
 letter_spacing <- 75.590551181 / 20 # 1mm in pixels
 line_spacing <- 37.795275591 / 10 # 2mm in pixels
 paragraph_indent <- 75.590551181 # 20mm in pixels
-p_space <- 0.3
+p_space <- 0.15
 p_newline <- 0.0075
 nrow_newline <- 4
 space_width <- letter_width * 0.45 # 5mm in pixels
@@ -118,7 +118,7 @@ while(stop_writing == FALSE) {
 # Make plot ----
 p <- ggplot() +
   #geom_segment(aes(x, y, xend = xend, yend = yend), alphabet) +
-  geom_segment(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text %>% filter(frame <= 150)) +
+  geom_segment(aes(x, y, xend = xend, yend = yend, frame = frame, cumulative = TRUE), text, size = 0.2) +
   # geom_point(aes(x, y), control_pts) +
   #coord_equal() +
   scale_x_continuous(limits = c(0, canvas_width), expand = c(0, 0)) +
@@ -127,8 +127,8 @@ p <- ggplot() +
   theme_blankcanvas
 
 # Save plot ----
-#ggsave("asemic.png", p, width = 210, height = 210, units = "mm")
+ggsave("asemic-2.png", p, width = 210, height = 297, units = "mm")
 
 # Save gif ----
-animation::ani.options(interval = 1/25)
-gganimate(p, filename = "asemic.gif", title_frame = FALSE)
+# animation::ani.options(interval = 1/25)
+# gganimate(p, filename = "asemic.gif", title_frame = FALSE)
