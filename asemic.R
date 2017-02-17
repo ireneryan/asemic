@@ -13,30 +13,30 @@ library(tweenr)
 set.seed(101) # make reproducible
 
 # Parameters ----
-n_cpts <- 20 # number of control points
+n_cpts <- 5 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 400 # number of letters in alphabet
-bg_col <- "gray95" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "transparent" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
 margin_left <- 1 * 75.590551181 # 20mm in pixels
 margin_right <- 1 * 75.590551181 # 20mm in pixels
 margin_top <- 1 * 75.590551181 # 20mm in pixels
 margin_bottom <- 1 * 75.590551181 # 20mm in pixels
-letter_spacing <- 65 * 1 # 1mm in pixels
-letter_height <- (canvas_width - margin_left - margin_right - 4 * letter_spacing) / 5 # 50 # 5mm in pixels
+letter_height <- 25
 letter_width <- letter_height
+letter_spacing <- letter_width
 line_spacing <- letter_spacing * 1 # 2mm in pixels
-paragraph_indent <- 0 * margin_left # 20mm in pixels
-p_space <- 0.00 # probability of a space
-p_newline <- 0.00 # probability of a new line
-nrow_newline <- 100 # minimum number of rows before starting a new line
+paragraph_indent <- 1 * margin_left # 20mm in pixels
+p_space <- 0.05 # probability of a space
+p_newline <- 0.05 # probability of a new line
+nrow_newline <- 3 # minimum number of rows before starting a new line
 space_width <- letter_width # 5mm in pixels
 paragraph_spacing <- 0 * letter_height
 font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
-corner_points <- TRUE
+corner_points <- FALSE
 steiner <- FALSE
 space_by_width <- FALSE
 s <- 0.5
@@ -46,6 +46,8 @@ write_script <- FALSE
 script <- "the five boxing wizards jump quickly"
 script_vector <- str_split(script, "", simplify = TRUE)[1, ]
 centre_vertically <- FALSE
+noise <- TRUE
+nudge <- letter_width * 1 # amount of noise to add to segments
 
 # Pre-processing
 if(steiner) {
@@ -296,18 +298,20 @@ command_arrows <- rbind(command_arrows0, command_arrows1)
 #                    nframes = 25)
 
 # Make plot ----
-nudge <- 40
-text2 <- text %>% mutate(delta1 = runif(nrow(.), -nudge, nudge), x = x + delta1,
-                         delta2 = runif(nrow(.), -nudge, nudge), y = y + delta2,
-                         delta3 = runif(nrow(.), -nudge, nudge), xend = xend + delta3,
-                         delta4 = runif(nrow(.), -nudge, nudge), yend = yend + delta4) %>%
-  select(-delta1, -delta2, -delta3, -delta4)
 
-df <- list(text, text2, text)
-
-tf <- tween_states(df, tweenlength = 3, statelength = 0,
-                   ease = "linear",
-                   nframes = 100)
+if(noise) {
+  text2 <- text %>% mutate(delta1 = runif(nrow(.), -nudge, nudge), x = x + delta1,
+                           delta2 = runif(nrow(.), -nudge, nudge), y = y + delta2,
+                           delta3 = runif(nrow(.), -nudge, nudge), xend = xend + delta3,
+                           delta4 = runif(nrow(.), -nudge, nudge), yend = yend + delta4) %>%
+    select(-delta1, -delta2, -delta3, -delta4)
+  
+  df <- list(text, text2, text)
+  
+  tf <- tween_states(df, tweenlength = 3, statelength = 0,
+                     ease = "exponential-in",
+                     nframes = 1000)
+}
 
 # Plot alphabet
 # p2 <- ggplot(alphabet) +
@@ -330,13 +334,19 @@ if(ruled_lines) {
 
 if(cursive) {
   p <- p +
-    geom_path(aes(x, y, group = paragraph_id, frame = frame, cumulative = TRUE), text, size = 0.5, colour = font_colour)
+    geom_path(aes(x, y, group = paragraph_id, frame = frame, cumulative = TRUE), tf, size = 0.5, colour = font_colour)
+} else if (noise) {
+  p <- p +
+    geom_curve(aes(x = x, y = y, xend = xend, yend = yend, frame = .frame, cumulative = TRUE),
+                 tf, # %>% filter(letter_id != nrow(alphabet)),
+                 colour = font_colour, lineend = "round", alpha = 0.075, size = 0.03, curvature = 2) #+
+    #facet_wrap(~letter_id, scales = "free")
 } else {
   p <- p +
     #geom_tile(aes(x = x, y = y, width = width, height = height), text %>% mutate(width = letter_height / 10, height = width), fill = font_colour)
     geom_segment(aes(x = x, y = y, xend = xend, yend = yend, frame = .frame, cumulative = TRUE),
-                 tf, # %>% filter(letter_id != nrow(alphabet)),
-                 colour = font_colour, lineend = "round", alpha = 0.075, size = 0.175) #+
+                 df, # %>% filter(letter_id != nrow(alphabet)),
+                 colour = font_colour, lineend = "round", alpha = 0.3, size = 0.03)
     #scale_size_continuous(range = c(0.1, 0.4)) + theme(legend.position = "none")
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
@@ -354,14 +364,14 @@ if(highlight_text) {
     geom_rect(aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax), highlights,
               fill = "yellow" , alpha = 0.5)
 }
-
+#p
 #p <- p + coord_polar()
 
 # Save plot ----
-#ggsave("test.png", p, width = 210, height = 210, units = "mm")
+ggsave("test.png", p, width = 210, height = 210, units = "mm")
 
 
 # Save gif ----
-animation::ani.options(interval = 1/12.5)
-gganimate(p, "plots/asemic004.gif", title_frame = FALSE)
-
+# animation::ani.options(interval = 1/12.5)
+# gganimate(p, "test.gif", title_frame = FALSE)
+# 
