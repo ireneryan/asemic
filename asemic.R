@@ -5,9 +5,12 @@ library(animation)
 library(cowplot)
 library(dplyr)
 library(gganimate)
+library(ggart)
 library(ggplot2)
+library(steiner)
 library(stringr)
 library(tweenr)
+library(viridis)
 
 # Setup ----
 set.seed(101) # make reproducible
@@ -16,7 +19,7 @@ set.seed(101) # make reproducible
 n_cpts <- 5 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
-n_letters <- 400 # number of letters in alphabet
+n_letters <- 26 # number of letters in alphabet
 bg_col <- "transparent" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
@@ -24,9 +27,9 @@ margin_left <- 1 * 75.590551181 # 20mm in pixels
 margin_right <- 1 * 75.590551181 # 20mm in pixels
 margin_top <- 1 * 75.590551181 # 20mm in pixels
 margin_bottom <- 1 * 75.590551181 # 20mm in pixels
-letter_height <- 25
+letter_height <- 20
 letter_width <- letter_height
-letter_spacing <- letter_width
+letter_spacing <- letter_width / 2
 line_spacing <- letter_spacing * 1 # 2mm in pixels
 paragraph_indent <- 1 * margin_left # 20mm in pixels
 p_space <- 0.05 # probability of a space
@@ -36,8 +39,8 @@ space_width <- letter_width # 5mm in pixels
 paragraph_spacing <- 0 * letter_height
 font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
-corner_points <- FALSE
-steiner <- FALSE
+corner_points <- TRUE
+steiner <- TRUE
 space_by_width <- FALSE
 s <- 0.5
 ruled_lines <- FALSE
@@ -47,7 +50,7 @@ script <- "the five boxing wizards jump quickly"
 script_vector <- str_split(script, "", simplify = TRUE)[1, ]
 centre_vertically <- FALSE
 noise <- TRUE
-nudge <- letter_width * 1 # amount of noise to add to segments
+nudge <- letter_width * 1.5 # amount of noise to add to segments
 
 # Pre-processing
 if(steiner) {
@@ -57,95 +60,7 @@ if(steiner) {
   corner_points <- FALSE
 }
 
-# General functions ----
-# Function for computing equilateral point for ab (c is point of opposite side of equilateral point)
-compute_e <- function(a, b, c) { # a, b and c are vectors of length two (x and y components)
-  # Calculate the midpoint of ab
-  m <- (a + b) / 2
-  # Calculate the gradient of the line through m that is perpendicular to ab
-  grad_ab <- ifelse(a[1] == b[1], Inf, (b[2] - a[2]) / (b[1] - a[1])) # m = (y2 - y1) / (x2 - x1)
-  grad_em <- ifelse(grad_ab == 0, Inf, -1 / grad_ab) #m1m2 = -1 for perpendicular lines
-  # Calculate the intercept of the line through m that is perpendicular to ab
-  int_em <- ifelse(grad_em %in% c(-Inf, Inf), NA, m[2] - grad_em * m[1]) # y = mx + c --> c = y - mx
-  # calculate the distance from the midpoint of ab to the equilateral point
-  dist <- sqrt(3) / 2 * sqrt((b[1] - a[1])^2 + (b[2] - a[2])^2)
-  # calculate the co-ordinates of equilateral point 1
-  ex_1 <- m[1] + sqrt(dist^2 / (1 + grad_em^2)) # x = x1 +/- sqrt(d^2 / (1 + m^2))
-  ey_1 <- ifelse(is.na(int_em), m[2] + dist, grad_em * ex_1 + int_em)
-  # calculate the co-ordinates of equilateral point 2
-  ex_2 <- m[1] - sqrt(dist^2 / (1 + grad_em^2)) # x = x1 +/- sqrt(d^2 / (1 + m^2))
-  ey_2 <- ifelse(is.na(int_em), m[2] - dist, grad_em * ex_2 + int_em)
-  # calculate the distances from e1 and e2 to c
-  d_e1c <- sqrt((ex_1 - c[1])^2 + (ey_1 - c[2])^2)
-  d_e2c <- sqrt((ex_2 - c[1])^2 + (ey_2 - c[2])^2)
-  # e point is the one that is furthest from c
-  if (d_e1c >= d_e2c) {
-    e <- c(ex_1, ey_1)
-  } else {
-    e <- c(ex_2, ey_2)
-  }
-}
-
-# Function for calculating the intersection of two lines
-compute_intersect <- function(x1, y1, x2, y2, x3, y3, x4, y4) {
-  c(((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)),
-    ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)))
-}
-
-# Function for calculating the Euclidean distance between two points
-d <- function(x1, y1, x2, y2) {
-  sqrt((x2 - x1)^2 + (y2 - y1)^2)
-}
-
-# Function for creating Steiner tree on three points
-make_steiner3 <- function(a, b, c) {
-  ab <- sqrt((a[1] - b[1])^2 + (a[2] - b[2])^2)
-  ac <- sqrt((a[1] - c[1])^2 + (a[2] - c[2])^2)
-  bc <- sqrt((c[1] - b[1])^2 + (c[2] - b[2])^2)
-  angle_bac <- acos((ab^2 + ac^2 - bc^2) / (2 * ab * ac)) * 180 / pi
-  angle_abc <- acos((ab^2 + bc^2 - ac^2) / (2 * ab * bc)) * 180 / pi
-  angle_acb <- acos((ac^2 + bc^2 - ab^2) / (2 * ac * bc)) * 180 / pi
-  # find Steiner point
-  if(angle_bac >= 120) {
-    s <- a
-    valid <- 0
-  } else if (angle_abc >= 120) {
-    s <- b
-    valid <- 0
-  } else if (angle_acb >= 120) {
-    s <- c
-    valid <- 0
-  } else {
-    e1 <- compute_e(a, b, c)
-    e2 <- compute_e(c, a, b)
-    s <- compute_intersect(e1[1], e1[2], c[1], c[2], e2[1], e2[2], b[1], b[2])
-    valid <- 1
-  }
-  edges <- data.frame(x =    c(a[1], b[1], c[1]),
-                      y =    c(a[2], b[2], c[2]),
-                      xend = c(s[1], s[1], s[1]),
-                      yend = c(s[2], s[2], s[2]))
-  return(edges)
-}
-
-# Plotting theme
-theme_blankcanvas <- theme(
-  axis.title = element_blank(),
-  axis.text = element_blank(),
-  axis.ticks = element_blank(),
-  axis.line = element_blank(),
-  legend.position = "none",
-  panel.background = element_rect(fill = bg_col, colour = bg_col),
-  panel.border = element_blank(),
-  panel.grid = element_blank(),
-  plot.background = element_rect(fill = bg_col, colour = bg_col),
-  plot.margin = unit(c(0, 0, -2, -1), "mm"), # top, right, bottom, left
-  strip.background = element_blank(),
-  strip.text = element_blank()
-)
-
 # Create alphabet ----
-
 # Create control points
 if(corner_points) {
   control_pts <- data.frame(x = c(0, 1, 1, 0, runif(n_cpts - 4)), y = c(0, 0, 1, 1, runif(n_cpts - 4))) %>%
@@ -156,23 +71,13 @@ if(corner_points) {
   #                  y = rep(seq(0, 1, s), each = 1/s+1)) %>%
   #   mutate(x = x * letter_width, y = y * letter_height)
   # n_cpts <- nrow(control_pts)
-  
-  
 } else {
   control_pts <- data.frame(x = c(runif(n_cpts)), y = runif(n_cpts)) %>%
     mutate(x = x * letter_width, y = y * letter_height)
 }
 
 # Calculate complete graph on control points
-complete_graph <- data.frame(x = numeric(0), y = numeric(0), xend = numeric(0), yend = numeric(0))
-
-for(i in seq(1, n_cpts - 1)) {
-  for(j in seq(i + 1, n_cpts)) {
-    complete_graph <- complete_graph %>%
-      rbind(data.frame(x = control_pts$x[i], y = control_pts$y[i],
-                       xend = control_pts$x[j], yend = control_pts$y[j]))
-  }
-}
+complete_graph <- complete_graph(control_pts)
 
 # Create letters
 alphabet <- data.frame(letter_id = integer(0), x = numeric(0), y = numeric(0),
@@ -180,7 +85,7 @@ alphabet <- data.frame(letter_id = integer(0), x = numeric(0), y = numeric(0),
 
 for(i in 1:n_letters) {
   if(steiner) {
-    letter <- make_steiner3(c(control_pts$x[3 * (i - 1) + 1], control_pts$y[3 * (i - 1) + 1]),
+    letter <- compute_smt3(c(control_pts$x[3 * (i - 1) + 1], control_pts$y[3 * (i - 1) + 1]),
                             c(control_pts$x[3 * (i - 1) + 2], control_pts$y[3 * (i - 1) + 2]),
                             c(control_pts$x[3 * (i - 1) + 3], control_pts$y[3 * (i - 1) + 3])) %>%
       mutate(letter_id = i) %>%
@@ -283,20 +188,6 @@ command_arrows0 <- data.frame(y = lines$y + 0.25 * letter_height,
 command_arrows1 <- data.frame(y = lines$y + 0.75 * letter_height, yend = lines$yend + letter_height / 2, x = paragraph_indent / 2 - 0.5 * letter_height) %>% mutate(xend = x + 0.5 * letter_height)
 command_arrows <- rbind(command_arrows0, command_arrows1)
 
-# temp <- text %>% group_by(frame) %>% summarise(maxx = max(x)) %>% mutate(size = runif(nrow(.)))
-# text <- text %>% left_join(temp)
-# text2 <- text %>% mutate(prop = runif(nrow(.)), x = x + prop * letter_width / 3,
-#                          xend = xend + prop * letter_width / 3) %>% select(-prop)
-# 
-# text <- text %>% mutate(frame2 = 1)
-# text2 <- text2 %>% mutate(frame2 = 2)
-# 
-# df <- list(text, text2)
-# 
-# tf <- tween_states(df, tweenlength = 1.5, statelength = 0,
-#                    ease = "linear",
-#                    nframes = 25)
-
 # Make plot ----
 
 if(noise) {
@@ -309,7 +200,7 @@ if(noise) {
   df <- list(text, text2, text)
   
   tf <- tween_states(df, tweenlength = 3, statelength = 0,
-                     ease = "exponential-in",
+                     ease = "linear",
                      nframes = 1000)
 }
 
@@ -325,7 +216,7 @@ if(noise) {
 p <- ggplot() +
   scale_x_continuous(limits = c(0, canvas_width), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, canvas_height), expand = c(0, 0)) +
-  theme_blankcanvas
+  theme_blankcanvas(bg_col = bg_col)
 
 if(ruled_lines) {
   p <- p + geom_segment(aes(x, y, xend = xend, yend = yend), lines, colour = "black", alpha = 1,
@@ -337,16 +228,18 @@ if(cursive) {
     geom_path(aes(x, y, group = paragraph_id, frame = frame, cumulative = TRUE), tf, size = 0.5, colour = font_colour)
 } else if (noise) {
   p <- p +
-    geom_curve(aes(x = x, y = y, xend = xend, yend = yend, frame = .frame, cumulative = TRUE),
-                 tf, # %>% filter(letter_id != nrow(alphabet)),
-                 colour = font_colour, lineend = "round", alpha = 0.075, size = 0.03, curvature = 2) #+
+    geom_curve(aes(x = x, y = y, xend = xend, yend = yend, frame = .frame, cumulative = TRUE,
+                   colour = letter_id),
+                 tf %>% filter(x != xend & y != yend), # %>% filter(letter_id != nrow(alphabet)),
+                 lineend = "round", alpha = 0.15, size = 0.03) +
+    scale_color_viridis(option = "C")
     #facet_wrap(~letter_id, scales = "free")
 } else {
   p <- p +
     #geom_tile(aes(x = x, y = y, width = width, height = height), text %>% mutate(width = letter_height / 10, height = width), fill = font_colour)
-    geom_segment(aes(x = x, y = y, xend = xend, yend = yend, frame = .frame, cumulative = TRUE),
-                 df, # %>% filter(letter_id != nrow(alphabet)),
-                 colour = font_colour, lineend = "round", alpha = 0.3, size = 0.03)
+    geom_segment(aes(x = x, y = y, xend = xend, yend = yend),
+                 text, # %>% filter(letter_id != nrow(alphabet)),
+                 lineend = "round", alpha = 1, size = 0.3, colour = font_colour)
     #scale_size_continuous(range = c(0.1, 0.4)) + theme(legend.position = "none")
     #geom_point(aes(x, y), text, size = 0.5, colour = font_colour) +
     #geom_point(aes(xend, yend), text, size = 0.5, colour = font_colour)
@@ -368,7 +261,7 @@ if(highlight_text) {
 #p <- p + coord_polar()
 
 # Save plot ----
-ggsave("test.png", p, width = 210, height = 210, units = "mm")
+ggsave("plots/birds-01.png", p, width = 210, height = 210, units = "mm")
 
 
 # Save gif ----
