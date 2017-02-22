@@ -16,28 +16,28 @@ library(viridis)
 set.seed(101) # make reproducible
 
 # Parameters ----
-n_cpts <- 10 # number of control points
+n_cpts <- 5 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
 bg_col <- "transparent" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
-margin_left <- 1 * 75.590551181 # 20mm in pixels
-margin_right <- 1 * 75.590551181 # 20mm in pixels
-margin_top <- 1 * 75.590551181 # 20mm in pixels
-margin_bottom <- 1 * 75.590551181 # 20mm in pixels
-letter_height <- 30
-letter_width <- letter_height
+margin_left <- 0 * 75.590551181 # 20mm in pixels
+margin_right <- 0 * 75.590551181 # 20mm in pixels
+margin_top <- 0 * 75.590551181 # 20mm in pixels
+margin_bottom <- 0 * 75.590551181 # 20mm in pixels
+letter_height <- 130
+letter_width <- letter_height / 2
 letter_spacing <- letter_width / 2
 line_spacing <- letter_spacing * 1 # 2mm in pixels
-paragraph_indent <- 1 * margin_left # 20mm in pixels
-p_space <- 0.0 # probability of a space
-p_newline <- 0.0 # probability of a new line
-nrow_newline <- 300 # minimum number of rows before starting a new line
+paragraph_indent <- 0 * margin_left # 20mm in pixels
+p_space <- 0.05 # probability of a space
+p_newline <- 0.05 # probability of a new line
+nrow_newline <- 3 # minimum number of rows before starting a new line
 space_width <- letter_width # 5mm in pixels
-paragraph_spacing <- 0 * letter_height
-font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+paragraph_spacing <- 1 * letter_height
+font_colour <- "dodgerBlue" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
@@ -50,8 +50,8 @@ script <- "test"
 script_vector <- str_split(script, "", simplify = TRUE)[1, ]
 centre_vertically <- FALSE
 noise <- TRUE
-nudge <- letter_width * 5 # amount of noise to add to segments
-nframes <- 500
+nudge <- letter_width * 1.5 # amount of noise to add to segments
+nframes <- 1000
 
 # Pre-processing
 if(steiner) {
@@ -201,7 +201,7 @@ if(noise) {
   df <- list(text, text2, text)
   
   tf <- tween_states(df, tweenlength = 3, statelength = 0,
-                     ease = "linear",
+                     ease = "exponential-in",
                      nframes = nframes)
 }
 
@@ -229,11 +229,12 @@ if(cursive) {
     geom_path(aes(x, y, group = paragraph_id, frame = frame, cumulative = TRUE), tf, size = 0.5, colour = font_colour)
 } else if (noise) {
   p <- p +
-    geom_curve(aes(x = x, y = y, xend = xend, yend = yend, frame = .frame, cumulative = TRUE,
-                   colour = letter_id),
+    geom_segment(aes(x = x, y = y, xend = xend, yend = yend, frame = .frame, cumulative = TRUE,
+                     colour = letter_id),
                  tf %>% filter(x != xend & y != yend), # %>% filter(letter_id != nrow(alphabet)),
-                 lineend = "round", alpha = 0.15, size = 0.03) +
-    scale_color_viridis(option = "B")
+                 lineend = "round", alpha = 0.03, size = 1) +
+    #scale_color_viridis(option = "B")
+    scale_colour_gradient(low = "black", high = "red")
     #facet_wrap(~letter_id, scales = "free")
 } else {
   p <- p +
@@ -262,7 +263,7 @@ if(highlight_text) {
 #p <- p + coord_polar()
 
 # Save plot ----
-#ggsave("test-7.png", p, width = 210, height = 210, units = "mm")
+ggsave("test-11.png", p, width = 210, height = 210, units = "mm")
 
 
 # Save gif ----
