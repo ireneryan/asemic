@@ -16,18 +16,18 @@ library(viridis)
 set.seed(101) # make reproducible
 
 # Parameters ----
-n_cpts <- 5 # number of control points
+n_cpts <- 25 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- "transparent" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+bg_col <- "lightGray" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
 canvas_width <- 793.700787402 # 210mm in pixels
 canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
-margin_left <- 0 * 75.590551181 # 20mm in pixels
-margin_right <- 0 * 75.590551181 # 20mm in pixels
-margin_top <- 0 * 75.590551181 # 20mm in pixels
-margin_bottom <- 0 * 75.590551181 # 20mm in pixels
-letter_height <- 130
+margin_left <- 1 * 75.590551181 # 20mm in pixels
+margin_right <- 1 * 75.590551181 # 20mm in pixels
+margin_top <- 1 * 75.590551181 # 20mm in pixels
+margin_bottom <- 1 * 75.590551181 # 20mm in pixels
+letter_height <- 20
 letter_width <- letter_height / 2
 letter_spacing <- letter_width / 2
 line_spacing <- letter_spacing * 1 # 2mm in pixels
@@ -37,20 +37,20 @@ p_newline <- 0.05 # probability of a new line
 nrow_newline <- 3 # minimum number of rows before starting a new line
 space_width <- letter_width # 5mm in pixels
 paragraph_spacing <- 1 * letter_height
-font_colour <- "dodgerBlue" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
+font_colour <- "black" #"#07158A" # "darkgreen" #rgb(35 / 255, 38 / 255, 109 / 255)
 cursive <- FALSE
 corner_points <- TRUE
 steiner <- FALSE
 space_by_width <- FALSE
 s <- 0.5
-ruled_lines <- FALSE
-highlight_text <- FALSE
+ruled_lines <- TRUE
+highlight_text <- TRUE
 write_script <- FALSE
-script <- "test"
+script <- "this is a test"
 script_vector <- str_split(script, "", simplify = TRUE)[1, ]
 centre_vertically <- FALSE
-noise <- TRUE
-nudge <- letter_width * 1.5 # amount of noise to add to segments
+noise <- FALSE
+nudge <- letter_width * 1 / 2 # amount of noise to add to segments
 nframes <- 1000
 
 # Pre-processing
@@ -263,7 +263,7 @@ if(highlight_text) {
 #p <- p + coord_polar()
 
 # Save plot ----
-ggsave("test-11.png", p, width = 210, height = 210, units = "mm")
+ggsave("test-13.png", p, width = 210, height = 210, units = "mm")
 
 
 # Save gif ----
