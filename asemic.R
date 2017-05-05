@@ -16,19 +16,19 @@ library(viridis)
 set.seed(101) # make reproducible
 
 # Parameters ----
-n_cpts <- 25 # number of control points
+n_cpts <- 7 # number of control points
 min_edges <- 2 # minimum number of edges in a letter
 max_edges <- n_cpts - 1 # maximum number of edges in a letter
 n_letters <- 26 # number of letters in alphabet
-bg_col <- "lightGray" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
-canvas_width <- 793.700787402 # 210mm in pixels
-canvas_height <- canvas_width #* 297 / 210 # 297mm in pixels
+bg_col <- "transparent" #rgb(248 / 255, 236 / 255, 194 / 255) #"lightGray" #"white" #"#F0EEE1" # rgb(255 / 255, 255 / 255, 255 / 255)
+canvas_width <- 610 # 210mm in pixels
+canvas_height <- 610 * 35 / 24 #* 297 / 210 # 297mm in pixels
 margin_left <- 1 * 75.590551181 # 20mm in pixels
 margin_right <- 1 * 75.590551181 # 20mm in pixels
 margin_top <- 1 * 75.590551181 # 20mm in pixels
 margin_bottom <- 1 * 75.590551181 # 20mm in pixels
-letter_height <- 20
-letter_width <- letter_height / 2
+letter_height <- 10
+letter_width <- letter_height / ((1 + sqrt(5)) / 2)
 letter_spacing <- letter_width / 2
 line_spacing <- letter_spacing * 1 # 2mm in pixels
 paragraph_indent <- 0 * margin_left # 20mm in pixels
@@ -43,13 +43,13 @@ corner_points <- TRUE
 steiner <- FALSE
 space_by_width <- FALSE
 s <- 0.5
-ruled_lines <- TRUE
-highlight_text <- TRUE
+ruled_lines <- FALSE
+highlight_text <- FALSE
 write_script <- FALSE
 script <- "this is a test"
 script_vector <- str_split(script, "", simplify = TRUE)[1, ]
 centre_vertically <- FALSE
-noise <- FALSE
+noise <- TRUE
 nudge <- letter_width * 1 / 2 # amount of noise to add to segments
 nframes <- 1000
 
@@ -263,7 +263,7 @@ if(highlight_text) {
 #p <- p + coord_polar()
 
 # Save plot ----
-ggsave("test-13.png", p, width = 210, height = 210, units = "mm")
+ggsave("test-14.png", p, width = 24, height = 35, units = "in")
 
 
 # Save gif ----
